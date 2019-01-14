@@ -1,0 +1,299 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "devTestLabName": {
+      "type": "string",
+      "metadata": {
+        "description": "DevTest Lab Name."
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Key Vault"
+      }
+    },
+    "kVSku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "SKU for the vault"
+      }
+    },
+    "kVenabledForDeployment": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specifies if the vault is enabled for VM or Service Fabric deployment"
+      }
+    },
+    "kVenabledForTemplateDeployment": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Specifies if the vault is enabled for ARM template deployment"
+      }
+    },
+    "kVenableVaultForVolumeEncryption": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specifies if the vault is enabled for volume encryption"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the function app that you wish to create."
+      }
+    },
+    "appsku": {
+      "type": "string",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard"
+      ],
+      "defaultValue": "Standard",
+      "metadata": {
+        "description": "The pricing tier for the hosting plan."
+      }
+    },
+    "appworkerSize": {
+      "type": "string",
+      "allowedValues": [
+        "0",
+        "1",
+        "2"
+      ],
+      "defaultValue": "0",
+      "metadata": {
+        "description": "The instance size of the hosting plan (small, medium, or large)."
+      }
+    },
+    "appstorageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS"
+      ],
+      "metadata": {
+        "description": "Storage Account type"
+      }
+    },
+    "githubRepoUrl": {
+      "type": "string",
+      "defaultValue": "https://github.com/RogerBestMsft/DTL-SecureArtifactData.git",
+      "metadata": {
+        "description": "Public GitHub repo url."
+      }
+    },
+    "githubBranch": {
+      "type": "string",
+      "defaultValue": "Master",
+      "metadata": {
+        "description": "Public GitHub repo branch name."
+      }
+    },
+    "servicePrincipalAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Service Principal Id to control VMs."
+      }
+    },
+    "servicePrincipalAppKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Service Principal key."
+      }
+    },
+    "spRoleNameGuid": {
+      "type": "string",
+      "defaultValue": "7CC5C41C-B193-4324-8770-D954EDD5DD65",
+      "metadata": {
+        "description": "Service Principal Role id."
+      }
+    },
+    "DTLArtifactName": {
+      "type": "string",
+      "defaultValue": "Auto Join Active Directory (AD) domain",
+      "metadata": {
+        "description": "DevTest Lab Artifact Title."
+      }
+    },
+    "DTLArtifactFolder": {
+      "type": "string",
+      "defaultValue": "windows-domain-join-secure",
+      "metadata": {
+        "description": "DevTest Lab Artifact Folder."
+      }
+    }
+  },
+  "variables": {
+    "functionAppName": "[parameters('appName')]",
+    "hostingPlanName": "[parameters('appName')]",
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'appfunc')]",
+    "Contributor": "[concat('/subscriptions/',subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+    "ServPrinAppId": "servicePrincipleAppId",
+    "ServPrinAppPwd": "servicePrincipleAppPwd"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[parameters('keyVaultName')]",
+      "apiVersion": "2015-06-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ],
+      "tags": {
+        "displayName": "KeyVault"
+      },
+      "properties": {
+        "enabledForDeployment": "[parameters('kVenabledForDeployment')]",
+        "enabledForTemplateDeployment": "[parameters('kVenabledForTemplateDeployment')]",
+        "enabledForVolumeEncryption": "[parameters('kVenableVaultForVolumeEncryption')]",
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "name": "[parameters('kVSku')]",
+          "family": "A"
+        },
+        "accessPolicies": [
+          {
+            "tenantId": "[reference(concat('Microsoft.Web/sites/', variables('functionAppName')), '2018-11-01', 'Full').identity.tenantId]",
+            "objectId": "[reference(concat('Microsoft.Web/sites/', variables('functionAppName')), '2018-11-01', 'Full').identity.principalId]",
+            "permissions": {
+              "keys": [
+                "all"
+              ],
+              "secrets": [
+                "all"
+              ]
+            }
+          }
+        ]
+      },
+      "resources": [
+        {
+          "type": "secrets",
+          "name": "[variables('ServPrinAppId')]",
+          "apiVersion": "2015-06-01",
+          "properties": {
+            "value": "[parameters('servicePrincipalAppId')]"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+          ]
+        },
+        {
+          "type": "secrets",
+          "name": "[variables('ServPrinAppPwd')]",
+          "apiVersion": "2015-06-01",
+          "properties": {
+            "value": "[parameters('servicePrincipalAppKey')]"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
+      "apiVersion": "2017-05-01",
+      "name": "[concat(parameters('keyVaultName'),'/Microsoft.Authorization/','a14988ac-6180-42a0-ab88-20f7382dd24c')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('Contributor')]",
+        "principalId": "[reference(concat('Microsoft.Web/sites/', variables('functionAppName')), '2018-11-01', 'Full').identity.principalId]",
+        "mode": "Incremental"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-12-01",
+      "location": "[parameters('location')]",
+      "kind": "Storage",
+      "sku": {
+        "name": "[parameters('appstorageAccountType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2015-04-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "name": "[variables('hostingPlanName')]",
+        "sku": "[parameters('appsku')]",
+        "workerSize": "[parameters('appworkerSize')]",
+        "hostingEnvironment": "",
+        "numberOfWorkers": 1
+      }
+    },
+    {
+      "apiVersion": "2015-04-01",
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "name": "[variables('functionAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "hostingEnvironment": "",
+        "clientAffinityEnabled": false,
+        "siteConfig": {
+          "alwaysOn": true
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "resources": [
+        {
+          "apiVersion": "2016-03-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "FUNCTIONS_EXTENSION_VERSION": "~1",
+            "AzureKeyVaultName": "[parameters('keyVaultName')]",
+            "AzureKeyVaultResourceGroup": "[resourceGroup().name]",
+            "AzureServicePrincipalIdSecretName": "[variables('ServPrinAppId')]",
+            "AzureServicePrincipalCredSecretName": "[variables('ServPrinAppPwd')]",
+            "DevTestLabName": "[parameters('devTestLabName')]",
+            "DevtestLabArtifact": "[parameters('DTLArtifactName')]",
+            "DevTestLabArtifactFolder": "[parameters('DTLArtifactFolder')]"
+          }
+        }
+      ]
+    }
+  ]
+}
