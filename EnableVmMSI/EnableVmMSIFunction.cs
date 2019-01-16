@@ -29,8 +29,7 @@ namespace EnableVmMSI
             djSecrets.KV_SecretName_ServicePrinciplePwd = GetEnvironmentVariable("AzureServicePrincipalCredSecretName");
 
             AzureResourceInformation resourceId = GetVmResourceId(eventGridEvent);
-            resourceId.LabName = GetEnvironmentVariable("DevTestLabName");
-
+            
             if (!string.IsNullOrWhiteSpace(resourceId.ResourceUri))
             {
                 AzureResourceManager arm = new AzureResourceManager(resourceId, djSecrets);
@@ -44,7 +43,7 @@ namespace EnableVmMSI
 
             returnData.ArtifactTitle = GetEnvironmentVariable("DevTestLabArtifact");
             returnData.ArtifactFolder = GetEnvironmentVariable("DevTestLabArtifactFolder");
-
+            returnData.LabName = GetEnvironmentVariable("DevTestLabName");
 
             if (StringComparer.OrdinalIgnoreCase.Equals(evnt.EventType, "Microsoft.Resources.ResourceActionSuccess") &&
                 evnt.Data is JObject data &&
@@ -57,7 +56,7 @@ namespace EnableVmMSI
 
                 if ((!returnData.ResourceUri.Contains(returnData.ArtifactFolder)) || (!returnData.ResourceUri.Contains(returnData.LabName.ToLower())))
                 {
-                    returnData = null;
+                    returnData.ResourceUri = null;
                 }
             }
 
