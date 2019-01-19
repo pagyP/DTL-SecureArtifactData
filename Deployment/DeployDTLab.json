@@ -62,6 +62,7 @@
             "folderPath": "[parameters('artifactRepoFolder')]",
             "branchRef": "[parameters('artifactRepoBranch')]",
             "displayName": "[parameters('artifactRepositoryDisplayName')]",
+            "securityToken": "[parameters('artifactRepoSecurityToken')]",
             "sourceType": "[parameters('artifactRepoType')]",
             "status": "Enabled"
           }

@@ -35,7 +35,9 @@ namespace EnableVmMSI
 
         private async Task Initialize(AzureResourceInformation resourceInfo, KeyVaultInformation vault)
         {
-            AzureServiceTokenProvider azureServiceTokenProvider = new AzureServiceTokenProvider();
+
+            //AzureServiceTokenProvider azureServiceTokenProvider = new AzureServiceTokenProvider();
+            var azureServiceTokenProvider = new AzureServiceTokenProvider();
             _kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback));
 
             string _id = (await _kv.GetSecretAsync(vault.KeyVaultUri, vault.KV_SecretName_ServicePrinciple)).Value;
@@ -87,7 +89,7 @@ namespace EnableVmMSI
                                 .Attach()
                                 .ApplyAsync();
                             // Remove after 30 min async
-                            RemoveAccess(vm);
+                            RemoveAccess(vm, _keyVault);
                         }
                         catch (Exception e) { }
                     }
@@ -126,10 +128,13 @@ namespace EnableVmMSI
             return computeId; 
         }
 
-        private async Task RemoveAccess(Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine vm )
+        private async Task RemoveAccess(Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine vm, Microsoft.Azure.Management.KeyVault.Fluent.IVault vault )
         {
-            TimeSpan timeSpan = new TimeSpan(0, 30, 0);
+            TimeSpan timeSpan = new TimeSpan(0, 3, 0);
             await Task.Delay(timeSpan);
+            await vault.Update()
+                .WithoutAccessPolicy(vm.SystemAssignedManagedServiceIdentityPrincipalId).ApplyAsync();
+                    
             await vm.Update().WithoutSystemAssignedManagedServiceIdentity().ApplyAsync();
         }
     }
