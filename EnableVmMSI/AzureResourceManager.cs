@@ -130,7 +130,7 @@ namespace EnableVmMSI
 
         private async Task RemoveAccess(Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine vm, Microsoft.Azure.Management.KeyVault.Fluent.IVault vault )
         {
-            TimeSpan timeSpan = new TimeSpan(0, 3, 0);
+            TimeSpan timeSpan = new TimeSpan(0, 30, 0);
             await Task.Delay(timeSpan);
             await vault.Update()
                 .WithoutAccessPolicy(vm.SystemAssignedManagedServiceIdentityPrincipalId).ApplyAsync();
