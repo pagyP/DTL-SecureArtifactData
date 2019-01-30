@@ -88,6 +88,8 @@ $MaxRetries = 25
 $currentRetry = 0
 $success = $false
 $DomainToJoin = "corp.rbestlocaldom.us"
+$KeyVaultName = "testkeyvault"
+
 Write-Host "Start: " + $(Get-Date)
 do {
     try
@@ -103,13 +105,13 @@ do {
         $KeyVaultToken = $content.access_token
 
         # Get credentials
-        $result = (Invoke-WebRequest -Uri 'https://dtlabdjvault.vault.azure.net/secrets/TestAccountCredential?api-version=2016-10-01' -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/TestAccountCredential?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminPassword = $result.Substring($begin,$endlength)
 
         # Get Account
-        $result = (Invoke-WebRequest -Uri 'https://dtlabdjvault.vault.azure.net/secrets/TestAccountUser?api-version=2016-10-01' -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/TestAccountUser?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminUsername = $result.Substring($begin,$endlength)

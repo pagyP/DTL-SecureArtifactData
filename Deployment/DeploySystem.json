@@ -124,7 +124,7 @@
     },
     "spRoleNameGuid": {
       "type": "string",
-      "defaultValue": "7CC5C41C-B193-4324-8770-D954EDD5DD65",
+      "defaultValue": "7CC5C41C-B193-4324-8770-D954EDD5DD64",
       "metadata": {
         "description": "Service Principal Role id."
       }
