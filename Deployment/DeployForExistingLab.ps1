@@ -13,7 +13,7 @@ This script creates a new environment in the lab using an existing environment t
 The subscription ID that is to be deployed to.
 .PARAMETER LabName
 The name of the DevTest Lab.
-.PARAMETER BaseSystemName
+.PARAMETER SystemResourceGroup
 The name of the Domain join system
 .PARAMETER SystemLocation
 The location for the Domain join system
@@ -30,7 +30,7 @@ Param(
     [string] $subscriptionId,
     [string] $subscriptionName, 
     [string] $devTestLabName, 
-    [string] $baseSystemName,
+    [string] $systemResourceGroup,
     [string] $systemLocation,
     [string] $servicePrincipalPassword
 )
@@ -42,34 +42,35 @@ Param(
 Import-Module -Name Az
 Import-Module -Name Az.Resources
 
-Connect-AzAccount
+Login-AzAccount
+#Connect-AzAccount
 
 $subInformation = Set-AzContext -Subscription $subscriptionName
 
 # Create Service Principal
 $SecureStringPassword = ConvertTo-SecureString -String $servicePrincipalPassword  -AsPlainText -Force
-$app = New-AzADApplication -DisplayName $($baseSystemName + "service") -IdentifierUris "http://$($baseSystemName)/service" -Password $SecureStringPassword
+$app = New-AzADApplication -DisplayName $($systemResourceGroup + "service") -IdentifierUris "http://$($systemResourceGroup)/service" -Password $SecureStringPassword
 $servicePrincipal = New-AzADServicePrincipal -ApplicationId $app.ApplicationId
 $roleResult = New-AzRoleAssignment -ObjectId $servicePrincipal.Id -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)
 
 # Create the resource group 
-New-AzResourceGroup -Name $baseSystemName -Location $systemLocation
+New-AzResourceGroup -Name $systemResourceGroup -Location $systemLocation
 
 $systemlocalFile = Join-Path $PSScriptRoot -ChildPath "DeploySystem.json"
 $gridlocalFile = Join-Path $PSScriptRoot -ChildPath "DeployEventGrid.json"
 
-$keyVaultName = $baseSystemName + "kv"
+$keyVaultName = $systemResourceGroup + "kv"
 
-$deployName = $baseSystemName + "lab"
+$deployName = $systemResourceGroup + "lab"
 
 # Create System
-$deployName = $baseSystemName + "system"
-$systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $baseSystemName -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($baseSystemName + 'app') -servicePrincipalAppId $($app.ApplicationId.Guid.ToString()) -servicePrincipalAppKey $servicePrincipal.Secret
+$deployName = $systemResourceGroup + "system"
+$systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $systemResourceGroup -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($systemResourceGroup + 'app') -servicePrincipalAppId $($app.ApplicationId.Guid.ToString()) -servicePrincipalAppKey $servicePrincipal.Secret
 
 Write-Host "System deployment: $($systemDeployResult.ProvisioningState)"
 
 # Get FunctionApp masterkey and create event grid connection.
-$deployName = $baseSystemName + "eventgrid"
+$deployName = $systemResourceGroup + "eventgrid"
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($($servicePrincipal.Secret))
@@ -90,13 +91,13 @@ $accessTokenHeader = @{ "Authorization" = "Bearer " + $auth.access_token }
 
 $azureRmBaseUri = "https://management.azure.com"
 $azureRmApiVersion = "2016-08-01"
-$azureRmResourceId = "/subscriptions/$subscriptionId/resourceGroups/$baseSystemName/providers/Microsoft.Web/sites/$($baseSystemName + 'app')"
+$azureRmResourceId = "/subscriptions/$subscriptionId/resourceGroups/$systemResourceGroup/providers/Microsoft.Web/sites/$($systemResourceGroup + 'app')"
 $azureRmAdminBearerTokenEndpoint = "/functions/admin/token"
 $adminBearerTokenUri = $azureRmBaseUri + $azureRmResourceId + $azureRmAdminBearerTokenEndpoint + "?api-version=" + $azureRmApiVersion
 
 $adminBearerToken = Invoke-RestMethod -Method Get -Uri $adminBearerTokenUri -Headers $accessTokenHeader
 
-$functionAppBaseUri = "https://$($baseSystemName + 'app').azurewebsites.net/admin"
+$functionAppBaseUri = "https://$($systemResourceGroup + 'app').azurewebsites.net/admin"
 
 $masterKeyEndpoint = "/host/systemkeys/_master"
 $masterKeyUri = $functionAppBaseUri + $masterKeyEndpoint
@@ -105,7 +106,7 @@ $adminTokenHeader = @{ "Authorization" = "Bearer " + $adminBearerToken }
 
 $masterKeys = Invoke-RestMethod -Method Get -Uri $masterKeyUri -Headers $adminTokenHeader
 
-$funcUri = $('https://' + $baseSystemName + 'app.azurewebsites.net/runtime/webhooks/EventGrid?functionName=EnableVmMSIFunction&code=' + $($masterKeys.value))
+$funcUri = $('https://' + $systemResourceGroup + 'app.azurewebsites.net/runtime/webhooks/EventGrid?functionName=EnableVmMSIFunction&code=' + $($masterKeys.value))
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
