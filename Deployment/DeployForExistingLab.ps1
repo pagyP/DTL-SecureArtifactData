@@ -66,6 +66,8 @@ $deployName = $baseSystemName + "lab"
 $deployName = $baseSystemName + "system"
 $systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $baseSystemName -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($baseSystemName + 'app') -servicePrincipalAppId $($app.ApplicationId.Guid.ToString()) -servicePrincipalAppKey $servicePrincipal.Secret
 
+Write-Host "System deployment: $($systemDeployResult.ProvisioningState)"
+
 # Get FunctionApp masterkey and create event grid connection.
 $deployName = $baseSystemName + "eventgrid"
 
@@ -109,3 +111,4 @@ $funcUri = $('https://' + $baseSystemName + 'app.azurewebsites.net/runtime/webho
 
 $deployEventGrid = New-AzDeployment -Name $deployName -Location $systemLocation -TemplateFile $gridlocalFile  -eventSubname $($devTestLabName + "grid") -endpoint $funcUri
 
+Write-Host "Event Grid deployment: $($deployEventGrid.ProvisioningState)"
