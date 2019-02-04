@@ -22,8 +22,10 @@ namespace EnableVmMSI
     {
         
         private KeyVaultClient _kv;        
-        private ClientCredential _clientCred;
-        private IAzure _azure;
+        //*private ClientCredential _clientCred;
+        //*private IAzure _azure;
+        private IAzure _msiazure;
+        private string _accessToken;
 
         public AzureResourceManager(AzureResourceInformation resourceId, KeyVaultInformation kvInfo)
         {
@@ -40,17 +42,24 @@ namespace EnableVmMSI
             var azureServiceTokenProvider = new AzureServiceTokenProvider();
             _kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback));
 
-            string _id = (await _kv.GetSecretAsync(vault.KeyVaultUri, vault.KV_SecretName_ServicePrinciple)).Value;
-            string _cred = (await _kv.GetSecretAsync(vault.KeyVaultUri, vault.KV_SecretName_ServicePrinciplePwd)).Value;
+            _accessToken = await azureServiceTokenProvider.GetAccessTokenAsync("https://management.azure.com/");
+
+            //*string _id = (await _kv.GetSecretAsync(vault.KeyVaultUri, vault.KV_SecretName_ServicePrinciple)).Value;
+            //*string _cred = (await _kv.GetSecretAsync(vault.KeyVaultUri, vault.KV_SecretName_ServicePrinciplePwd)).Value;
 
             resourceInfo.LabResourceGroup = ParseLabResourceGroup(resourceInfo.ResourceUri);
 
-            AzureCredentials _azureCred = SdkContext.AzureCredentialsFactory.FromServicePrincipal(
-                _id, _cred, resourceInfo.TenantId, AzureEnvironment.AzureGlobalCloud);
+            //*AzureCredentials _azureCred = SdkContext.AzureCredentialsFactory.FromServicePrincipal(
+            //*    _id, _cred, resourceInfo.TenantId, AzureEnvironment.AzureGlobalCloud);
 
-            _azure = Azure.Authenticate(_azureCred).WithSubscription(resourceInfo.SubscriptionId);
+            MSILoginInformation msiInfo = new MSILoginInformation(MSIResourceType.AppService);
+            AzureCredentials _msiazureCred = SdkContext.AzureCredentialsFactory.FromMSI(msiInfo,AzureEnvironment.AzureGlobalCloud);
 
-            _clientCred = new ClientCredential(_id, _cred);
+            //*_azure = Azure.Authenticate(_azureCred).WithSubscription(resourceInfo.SubscriptionId);
+
+            _msiazure = Azure.Authenticate(_msiazureCred).WithSubscription(resourceInfo.SubscriptionId);
+
+            //*_clientCred = new ClientCredential(_id, _cred);
 
         }
 
@@ -73,7 +82,7 @@ namespace EnableVmMSI
                     {
                         try
                         {
-                            var vm = await _azure.VirtualMachines.GetByIdAsync(vmResourceId);
+                            var vm = await _msiazure.VirtualMachines.GetByIdAsync(vmResourceId);
 
                             if (!vm.IsManagedServiceIdentityEnabled)
                             {
@@ -81,7 +90,7 @@ namespace EnableVmMSI
 
                             }
 
-                            var _keyVault = _azure.Vaults.GetByResourceGroup(vault.KeyVaultResourceGroup, vault.KeyVaultName);
+                            var _keyVault = _msiazure.Vaults.GetByResourceGroup(vault.KeyVaultResourceGroup, vault.KeyVaultName);
                             await _keyVault.Update()
                                 .DefineAccessPolicy()
                                     .ForObjectId(vm.SystemAssignedManagedServiceIdentityPrincipalId)
@@ -101,13 +110,13 @@ namespace EnableVmMSI
         private async Task<List<string>> GetArtifactInfoAsync(AzureResourceInformation resourceInfo)
         {
             List<string> computeId = new List<string>();
-            var context = new AuthenticationContext($"https://login.windows.net/{resourceInfo.TenantId}", false);
-            var token = await context.AcquireTokenAsync("https://management.azure.com/", _clientCred);
+            //*var context = new AuthenticationContext($"https://login.windows.net/{resourceInfo.TenantId}", false);
+            //*var token = await context.AcquireTokenAsync("https://management.azure.com/", _clientCred);
 
             string[] expandProperty = new string[] {"$expand=properties($expand=artifacts)", "api-version=2018-10-15-preview"};
 
             var response = await new Url($"https://management.azure.com/subscriptions/{resourceInfo.SubscriptionId}/resourceGroups/{resourceInfo.LabResourceGroup}/providers/Microsoft.DevTestLab/labs/{resourceInfo.LabName}/virtualmachines")
-                    .WithOAuthBearerToken(token.AccessToken)
+                    .WithOAuthBearerToken(_accessToken)
                     .SetQueryParams(expandProperty)
                     .GetStringAsync();
 
