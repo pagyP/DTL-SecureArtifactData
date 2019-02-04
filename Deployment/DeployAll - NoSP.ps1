@@ -69,6 +69,7 @@ $parsedIDs = $systemDeployResult.OutputsString.Split("")
 
 #Add output information to resource group
 $roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$devTestLabRG
+$roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$baseSystemName
 
 $deployName = $baseSystemName + "lab"
 # Create Lab
