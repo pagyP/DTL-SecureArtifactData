@@ -123,6 +123,18 @@
       "metadata": {
         "description": "DevTest Lab Artifact Folder."
       }
+    },
+    "DomainJoinId": {
+      "type": "string",
+      "metadata": {
+        "description" : "ID to join the AD Domain"
+      }
+    },
+    "DomainJoinSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Secret to join the AD Domain"
+      }
     }
   },
   "variables": {
@@ -166,7 +178,29 @@
           }
         ]
       },
-      "resources": [        
+      "resources": [
+        {
+          "type": "secrets",
+          "name": "TestAccountUser",
+          "apiVersion": "2015-06-01",
+          "properties": {
+            "value": "[parameters('DomainJoinId')]"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+          ]
+        },
+        {
+          "type": "secrets",
+          "name": "TestAccountCredential",
+          "apiVersion": "2015-06-01",
+          "properties": {
+            "value": "[parameters('DomainJoinSecret')]"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+          ]
+        }      
       ]
     },    
     {
