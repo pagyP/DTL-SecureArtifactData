@@ -30,11 +30,14 @@ The script assumes that a lab does not exists
 
 
 Param(
-    [string] $subscriptionId,
-    [string] $devTestLabName,
-    [string] $devTestLabRG,
-    [string] $baseSystemName,
-    [string] $systemLocation
+    [Parameter(Mandatory=$true)][string] $subscriptionId,
+    [Parameter(Mandatory=$true)][string] $devTestLabName,
+    [Parameter(Mandatory=$true)][string] $devTestLabRG,
+    [Parameter(Mandatory=$true)][string] $systemRG,
+    [Parameter(Mandatory=$true)][string] $baseSystemName,
+    [Parameter(Mandatory=$true)][string] $systemLocation,
+    [Parameter(Mandatory=$true)][string] $domainJoinId,
+    [Parameter(Mandatory=$true)][securestring] $domainJoinSecret
 )
 
 
@@ -50,7 +53,7 @@ Login-AzAccount
 $subInformation = Set-AzContext -Subscription $subscriptionId
 
 # Create the resource group 
-#New-AzResourceGroup -Name $baseSystemName -Location $systemLocation
+#New-AzResourceGroup -Name $systemRG -Location $systemLocation
 
 $systemlocalFile = Join-Path $PSScriptRoot -ChildPath "DeploySystem - NoSP.json"
 $lablocalFile = Join-Path $PSScriptRoot -ChildPath "DeployDTLab - NoSP.json"
@@ -60,16 +63,16 @@ $keyVaultName = $baseSystemName + "kv"
 
 # Create System
 $deployName = $baseSystemName + "system"
-$systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $baseSystemName -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($baseSystemName + 'app')
+$systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $systemRG -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($baseSystemName + 'app') -DomainJoinId $domainJoinId -DomainJoinSecret $domainJoinSecret
 
-Write-Host "Manually connect to public git repo"
-Pause "Authorize Git"
+Write-Host "Manually connect Function App to public git repo"
+Pause
 
 $parsedIDs = $systemDeployResult.OutputsString.Split("")
 
 #Add output information to resource group
 $roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$devTestLabRG
-$roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$baseSystemName
+$roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$systemRG
 
 $deployName = $baseSystemName + "lab"
 # Create Lab
@@ -89,7 +92,7 @@ $accessTokenHeader = @{ "Authorization" = "Bearer " + $accessToken }
 
 $azureRmBaseUri = "https://management.azure.com"
 $azureRmApiVersion = "2016-08-01"
-$azureRmResourceId = "/subscriptions/$subscriptionId/resourceGroups/$baseSystemName/providers/Microsoft.Web/sites/$($baseSystemName + 'app')"
+$azureRmResourceId = "/subscriptions/$subscriptionId/resourceGroups/$systemRG/providers/Microsoft.Web/sites/$($baseSystemName + 'app')"
 $azureRmAdminBearerTokenEndpoint = "/functions/admin/token"
 $adminBearerTokenUri = $azureRmBaseUri + $azureRmResourceId + $azureRmAdminBearerTokenEndpoint + "?api-version=" + $azureRmApiVersion
 
@@ -108,6 +111,6 @@ $funcUri = $('https://' + $baseSystemName + 'app.azurewebsites.net/runtime/webho
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-$deployEventGrid = New-AzDeployment -Name $deployName -Location $systemLocation -TemplateFile $gridlocalFile  -eventSubname $($devTestLabName + "grid") -endpoint $funcUri
+$deployEventGrid = New-AzDeployment -Name $deployName -Location $systemLocation -TemplateFile $gridlocalFile  -eventSubname $($baseSystemName + "grid") -endpoint $funcUri
 
 Write-Output "Completed."
