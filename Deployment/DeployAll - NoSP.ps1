@@ -53,6 +53,7 @@ Login-AzAccount
 $subInformation = Set-AzContext -Subscription $subscriptionId
 
 # Create the resource group 
+#New-AzResourceGroup -Name $devTestLabRG -Location $systemLocation
 #New-AzResourceGroup -Name $systemRG -Location $systemLocation
 
 $systemlocalFile = Join-Path $PSScriptRoot -ChildPath "DeploySystem - NoSP.json"
