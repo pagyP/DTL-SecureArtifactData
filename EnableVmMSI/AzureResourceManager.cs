@@ -87,6 +87,7 @@ namespace EnableVmMSI
             {
 
                 int first = 0;
+                string labRg = "";
                 string labName = "";
 
                 JToken rgId = lab.SelectToken("$.properties.vmCreationResourceGroupId");
@@ -94,10 +95,10 @@ namespace EnableVmMSI
                 if (rgId != null)
                 {
                     first = (rgId.ToString().IndexOf("resourceGroups/") + 15);
-                    labName = rgId.ToString().Substring(first, rgId.ToString().IndexOf("/", first) - first);
-                    if (labName == resourceGroup)
+                    labRg = rgId.ToString().Substring(first, rgId.ToString().Length - first);
+                    if (labRg == resourceGroup)
                     {
-                        return labName;
+                        return lab.SelectToken("name").ToString();
                     }
                 }
 
