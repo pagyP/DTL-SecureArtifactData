@@ -52,7 +52,7 @@ namespace EnableVmMSI
 
             // Get the LabResourceGroup
             resourceInfo.LabResourceGroup = ParseLabResourceGroup(resourceInfo.ResourceUri);
-            resourceInfo.LabName = await GetLabName(resourceInfo.LabResourceGroup);
+            resourceInfo.LabName = ParseLabName(resourceInfo.ResourceUri);
 
             // Get the management credentials
             MSILoginInformation msiInfo = new MSILoginInformation(MSIResourceType.AppService);
@@ -71,41 +71,10 @@ namespace EnableVmMSI
         }
 
         // Get the lab with the resource group
-        private async Task<string> GetLabName(string resourceGroup)
+        private string ParseLabName(string resourceId)
         {
-            string[] expandProperty = new string[] { "api-version=2018-10-15-preview" };
-
-            var response = await new Url($"https://management.azure.com/subscriptions/da8f3095-ac12-4ef2-9b35-fcd24842e207/providers/Microsoft.DevTestLab/labs")
-                    .WithOAuthBearerToken(_accessToken)
-                    .SetQueryParams(expandProperty)
-                    .GetStringAsync();
-
-            JObject vmsObject = JObject.Parse(response);
-            JArray vms = (JArray)vmsObject.SelectToken("value");
-
-            foreach (JToken lab in vms.Children())
-            {
-
-                int first = 0;
-                string labRg = "";
-                string labName = "";
-
-                JToken rgId = lab.SelectToken("$.properties.vmCreationResourceGroupId");
-
-                if (rgId != null)
-                {
-                    first = (rgId.ToString().IndexOf("resourceGroups/") + 15);
-                    labRg = rgId.ToString().Substring(first, rgId.ToString().Length - first);
-                    if (labRg == resourceGroup)
-                    {
-                        return lab.SelectToken("name").ToString();
-                    }
-                }
-
-            }
-
-            return null;
-            
+            int first = (resourceId.IndexOf("labs/") + 5);
+            return resourceId.Substring(first, resourceId.IndexOf("/", first) - first);
         }
 
         // Enable the IMSI on the Vm and add the IMSI id to the keyvault access policy
@@ -135,8 +104,8 @@ namespace EnableVmMSI
                                 {
                                     counter++;
                                     await Task.Delay(timeSpan);
-                                    log.LogInformation("@@@@@@@@@@@@ HHHH:" + DateTime.Now.ToString());
-                                    vm.Refresh();
+                                    log.LogInformation("[EnableVmMSIFunction] Enable IMSI loop:" + DateTime.Now.ToString());
+                                    await vm.RefreshAsync();
                                     if (counter == 20)
                                     {
                                         break;
@@ -145,6 +114,8 @@ namespace EnableVmMSI
 
                             }
 
+                            await vm.RefreshAsync();
+
                             var _keyVault = _msiazure.Vaults.GetByResourceGroup(vault.KeyVaultResourceGroup, vault.KeyVaultName);
                             await _keyVault.Update()
                                 .DefineAccessPolicy()
@@ -152,12 +123,12 @@ namespace EnableVmMSI
                                     .AllowSecretPermissions(SecretPermissions.Get)
                                 .Attach()
                                 .ApplyAsync();
-                            // Remove after 30 min async
-                            log.LogInformation("Execute removal.");
+                            // Remove after 4 min 
+                            log.LogInformation("[EnableVmMSIFunction] Cleanup:" + DateTime.Now.ToString());
                             await RemoveAccess(vm, _keyVault, log);
                         }
                         catch (Exception e) {
-                            log.LogInformation("[Error] " + e.Message);
+                            log.LogInformation("[EnableVmMSIFunction][Error] " + e.Message);
                         }
                     }
                 }
@@ -196,14 +167,21 @@ namespace EnableVmMSI
         // Remove the IMSI from the VM and the KeyVault Access policy
         private async Task RemoveAccess(Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine vm, Microsoft.Azure.Management.KeyVault.Fluent.IVault vault, ILogger log)
         {
-            TimeSpan timeSpan = new TimeSpan(0, 4, 0);
-            await Task.Delay(timeSpan);
-            log.LogInformation("In removal");
-            await vault.Update()
-                .WithoutAccessPolicy(vm.SystemAssignedManagedServiceIdentityPrincipalId).ApplyAsync();
-            log.LogInformation("Post policy");
-            await vm.Update().WithoutSystemAssignedManagedServiceIdentity().ApplyAsync();
-            log.LogInformation("Post identity");
+            try
+            {
+                TimeSpan timeSpan = new TimeSpan(0, 4, 0);
+                await Task.Delay(timeSpan);
+                log.LogInformation("[EnableVmMSIFunction] Cleanup Delay finished:" + DateTime.Now.ToString());
+                await vault.Update()
+                    .WithoutAccessPolicy(vm.SystemAssignedManagedServiceIdentityPrincipalId).ApplyAsync();
+                await vault.RefreshAsync();
+
+                await vm.Update().WithoutSystemAssignedManagedServiceIdentity().ApplyAsync();
+            }
+            catch (Exception e)
+            {
+                log.LogInformation("[EnableVmMSIFunction] Cleanup Error:" + e.Message);
+            }
         }
     }
 
