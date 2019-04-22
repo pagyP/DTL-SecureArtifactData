@@ -52,7 +52,7 @@ namespace EnableVmMSI
 
             // Get the LabResourceGroup
             resourceInfo.LabResourceGroup = ParseLabResourceGroup(resourceInfo.ResourceUri);
-            resourceInfo.LabName = ParseLabName(resourceInfo.ResourceUri);
+            resourceInfo.LabName = await GetLabName(resourceInfo.LabResourceGroup, log); //ParseLabName(resourceInfo.ResourceUri);
 
             // Get the management credentials
             MSILoginInformation msiInfo = new MSILoginInformation(MSIResourceType.AppService);
@@ -76,6 +76,66 @@ namespace EnableVmMSI
             int first = (resourceId.IndexOf("labs/") + 5);
             return resourceId.Substring(first, resourceId.IndexOf("/", first) - first);
         }
+
+        // Get the lab with the resource group
+        private async Task<string> GetLabName(string resourceGroup, Microsoft.Extensions.Logging.ILogger log)
+        {
+            try
+            {
+                string[] expandProperty = new string[] { "api-version=2018-10-15-preview" };
+
+                log.LogInformation("[EnableVmMSIFunction] Before Get Lab URL:" + DateTime.Now.ToString());
+
+                var response = await new Url($"https://management.azure.com/subscriptions/da8f3095-ac12-4ef2-9b35-fcd24842e207/providers/Microsoft.DevTestLab/labs")
+                        .WithOAuthBearerToken(_accessToken)
+                        .SetQueryParams(expandProperty)
+                        .GetStringAsync();
+
+                log.LogInformation("[EnableVmMSIFunction] After Get Lab URL:" + DateTime.Now.ToString());
+                log.LogInformation("[EnableVmMSIFunction] After Get Lab URL:" + response.ToString());
+
+                JObject vmsObject = JObject.Parse(response);
+
+                log.LogInformation("[EnableVmMSIFunction] After JObject:" + DateTime.Now.ToString());
+
+                JArray vms = (JArray)vmsObject.SelectToken("value");
+
+                log.LogInformation("[EnableVmMSIFunction] After JArray:" + vms.Count.ToString() + " : " + DateTime.Now.ToString());
+
+                foreach (JToken lab in vms.Children())
+                {
+
+                    int first = 0;
+                    string labRg = "";
+                    string labName = "";
+                    log.LogInformation("[EnableVmMSIFunction] After ForEach:" + DateTime.Now.ToString());
+                    JToken rgId = lab.SelectToken("$.properties.vmCreationResourceGroupId");
+
+
+                    if (rgId != null)
+                    {
+
+                        first = (rgId.ToString().IndexOf("resourceGroups/") + 15);
+                        labRg = rgId.ToString().Substring(first, (rgId.ToString().Length - first));
+
+                        log.LogInformation("[EnableVmMSIFunction] After labName:" + labName + " : " + DateTime.Now.ToString());
+
+                        if (labRg == resourceGroup)
+                        {
+                            return lab.SelectToken("name").ToString();
+                        }
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                log.LogInformation(e.Message);
+            }
+            return null;
+
+        }
+
 
         // Enable the IMSI on the Vm and add the IMSI id to the keyvault access policy
         public async Task AddIMSIToVMAsync(AzureResourceInformation resourceInfo, KeyVaultInformation vault, ILogger log)
