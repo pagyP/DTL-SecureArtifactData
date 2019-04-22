@@ -52,7 +52,7 @@ namespace EnableVmMSI
 
             // Get the LabResourceGroup
             resourceInfo.LabResourceGroup = ParseLabResourceGroup(resourceInfo.ResourceUri);
-            resourceInfo.LabName = await GetLabName(resourceInfo.LabResourceGroup, log); //ParseLabName(resourceInfo.ResourceUri);
+            resourceInfo.LabName = await GetLabName(resourceInfo.LabResourceGroup, log);
 
             // Get the management credentials
             MSILoginInformation msiInfo = new MSILoginInformation(MSIResourceType.AppService);
@@ -68,13 +68,6 @@ namespace EnableVmMSI
             int first = (resourceId.IndexOf("resourceGroups/") + 15);
             return resourceId.Substring(first, resourceId.IndexOf("/", first) - first);
 
-        }
-
-        // Get the lab with the resource group
-        private string ParseLabName(string resourceId)
-        {
-            int first = (resourceId.IndexOf("labs/") + 5);
-            return resourceId.Substring(first, resourceId.IndexOf("/", first) - first);
         }
 
         // Get the lab with the resource group
