@@ -30,7 +30,7 @@
         },
         "filter": {
           "subjectBeginsWith": "",
-          "subjectEndsWith": "",
+          "subjectEndsWith": "windows-domain-join-secure",
           "isSubjectCaseSensitive": false,
           "includedEventTypes": [ "All" ]
         }
