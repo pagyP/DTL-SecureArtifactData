@@ -70,7 +70,7 @@ namespace EnableVmMSI
 
         }
 
-        // Get the lab with the resource group
+        // Get the lab with the resource group that the CSE is executed in
         private async Task<string> GetLabName(string resourceGroup, Microsoft.Extensions.Logging.ILogger log)
         {
             try
@@ -102,6 +102,7 @@ namespace EnableVmMSI
                     string labRg = "";
                     string labName = "";
                     log.LogInformation("[EnableVmMSIFunction] After ForEach:" + DateTime.Now.ToString());
+                    // The vmCreationResourceGroupId is the property where the VMs are created.
                     JToken rgId = lab.SelectToken("$.properties.vmCreationResourceGroupId");
 
 
@@ -133,6 +134,7 @@ namespace EnableVmMSI
         // Enable the IMSI on the Vm and add the IMSI id to the keyvault access policy
         public async Task AddIMSIToVMAsync(AzureResourceInformation resourceInfo, KeyVaultInformation vault, ILogger log)
         {
+            // Handle multiple VMs in the same lab
             List<string> allVms = await GetArtifactInfoAsync(resourceInfo);
 
             if (allVms.Count > 0)
@@ -168,8 +170,9 @@ namespace EnableVmMSI
                             }
 
                             await vm.RefreshAsync();
-
+                            // Get the keyvault
                             var _keyVault = _msiazure.Vaults.GetByResourceGroup(vault.KeyVaultResourceGroup, vault.KeyVaultName);
+                            // Add access policy
                             await _keyVault.Update()
                                 .DefineAccessPolicy()
                                     .ForObjectId(vm.SystemAssignedManagedServiceIdentityPrincipalId)
@@ -195,6 +198,7 @@ namespace EnableVmMSI
 
             string[] expandProperty = new string[] {"$expand=properties($expand=artifacts)", "api-version=2018-10-15-preview"};
 
+            // Get the VMs 
             var response = await new Url($"https://management.azure.com/subscriptions/{resourceInfo.SubscriptionId}/resourceGroups/{resourceInfo.LabResourceGroup}/providers/Microsoft.DevTestLab/labs/{resourceInfo.LabName}/virtualmachines")
                     .WithOAuthBearerToken(_accessToken)
                     .SetQueryParams(expandProperty)
@@ -206,6 +210,7 @@ namespace EnableVmMSI
 
             foreach (JToken vm in vms.Children())
             {
+                // Check for the artifact and check for installing
                 var targetVM = vm.SelectToken("$..artifacts[?(@.artifactTitle == '"+ resourceInfo.ArtifactTitle +"' && @.status == 'Installing')]", false);
 
                 if ((targetVM != null) && (targetVM.HasValues)) 
@@ -225,10 +230,11 @@ namespace EnableVmMSI
                 TimeSpan timeSpan = new TimeSpan(0, 4, 0);
                 await Task.Delay(timeSpan);
                 log.LogInformation("[EnableVmMSIFunction] Cleanup Delay finished:" + DateTime.Now.ToString());
+                // Remove Access policy
                 await vault.Update()
                     .WithoutAccessPolicy(vm.SystemAssignedManagedServiceIdentityPrincipalId).ApplyAsync();
                 await vault.RefreshAsync();
-
+                // Remove VM identity
                 await vm.Update().WithoutSystemAssignedManagedServiceIdentity().ApplyAsync();
             }
             catch (Exception e)
