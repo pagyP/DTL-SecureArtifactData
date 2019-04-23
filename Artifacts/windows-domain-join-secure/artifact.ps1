@@ -69,7 +69,7 @@ do {
             throw "The current version of PowerShell is $($PSVersionTable.PSVersion.Major). Prior to running this artifact, ensure you have PowerShell 3 or higher installed."
         }
         
-        # Get KeyVault token        
+        # Get KeyVault token as the VM identity       
         $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata="true"} -UseBasicParsing
         Write-Host "Success: " + $(Get-Date)
         $content = $response.Content | ConvertFrom-Json
