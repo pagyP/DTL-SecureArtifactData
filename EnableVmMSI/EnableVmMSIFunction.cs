@@ -20,7 +20,7 @@ namespace EnableVmMSI
         [FunctionName("EnableVmMSIFunction")]
         public static void Run([EventGridTrigger]EventGridEvent eventGridEvent, ILogger log)
         {
-
+            // Get Environment variables.
             KeyVaultInformation djSecrets = new KeyVaultInformation();
             djSecrets.KeyVaultName = GetEnvironmentVariable("AzureKeyVaultName"); //azureKeyVaultName;
             djSecrets.KeyVaultUri = "https://" + djSecrets.KeyVaultName + ".vault.azure.net";
@@ -28,22 +28,28 @@ namespace EnableVmMSI
             djSecrets.KV_SecretName_ServicePrinciple = GetEnvironmentVariable("AzureServicePrincipalIdSecretName");
             djSecrets.KV_SecretName_ServicePrinciplePwd = GetEnvironmentVariable("AzureServicePrincipalCredSecretName");
 
+            // Handle Azure Events
             AzureResourceInformation resourceId = GetVmResourceId(eventGridEvent);
             
             if (!string.IsNullOrWhiteSpace(resourceId.ResourceUri))
             {
-                AzureResourceManager arm = new AzureResourceManager(resourceId, djSecrets);
+                AzureResourceManager arm = new AzureResourceManager(resourceId, djSecrets, log);
             }
             log.LogInformation(eventGridEvent.Data.ToString());
         }
 
+        /*
+        * Input: EventGrid Event
+        * Determine the necessary event - artifacts
+        * Parse the information and if the correct artifact folder and lab populate the AzureResourceInformation
+        */
         private static AzureResourceInformation GetVmResourceId(EventGridEvent evnt)
         {
             AzureResourceInformation returnData = new AzureResourceInformation();
 
             returnData.ArtifactTitle = GetEnvironmentVariable("DevTestLabArtifact");
             returnData.ArtifactFolder = GetEnvironmentVariable("DevTestLabArtifactFolder");
-            returnData.LabName = GetEnvironmentVariable("DevTestLabName");
+            //returnData.LabName = GetEnvironmentVariable("DevTestLabName");
 
             if (StringComparer.OrdinalIgnoreCase.Equals(evnt.EventType, "Microsoft.Resources.ResourceActionSuccess") &&
                 evnt.Data is JObject data &&
@@ -54,7 +60,7 @@ namespace EnableVmMSI
                 returnData.TenantId = data.SelectToken("tenantId")?.ToString();
                 returnData.SubscriptionId = data.SelectToken("subscriptionId")?.ToString();
 
-                if ((!returnData.ResourceUri.Contains(returnData.ArtifactFolder)) || (!returnData.ResourceUri.Contains(returnData.LabName.ToLower())))
+                if (!returnData.ResourceUri.Contains(returnData.ArtifactFolder))
                 {
                     returnData.ResourceUri = null;
                 }
@@ -64,6 +70,7 @@ namespace EnableVmMSI
 
         }
 
+        // Get the environment variables.
         public static string GetEnvironmentVariable(string name)
         {
             return System.Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
