@@ -28,5 +28,6 @@ The Function app identifies the correct custom script event based on the event t
 ## Customizations
 While this example has been specific to a domain join scenario, the pattern, of using the Function App as the access manager, can be used in other scenarios depending of your needs.  The artifact can be easily customized to install other software, gain access to secure locations, or modify Azure resources.
 
-The master branch uses a Service principal that has contributor access to the subscription
-The NoServicePrincipal branch uses the Managed Identity of that Function App that has contributor access to the resource group(s) where the VMs are located.
+# Notes
+- The master branch uses a Service principal that has contributor access to the subscription
+- The NoServicePrincipal branch uses the Managed Identity of that Function App that has contributor access to the resource group(s) where the VMs are located.
