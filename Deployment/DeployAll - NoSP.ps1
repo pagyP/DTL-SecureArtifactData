@@ -66,14 +66,9 @@ $keyVaultName = $baseSystemName + "kv"
 $deployName = $baseSystemName + "system"
 $systemDeployResult = New-AzResourceGroupDeployment -Name $deployName -ResourceGroupName $systemRG -TemplateFile $systemlocalFile -devTestLabName $devTestLabName -keyVaultName $keyVaultName -appName $($baseSystemName + 'app') -DomainJoinId $domainJoinId -DomainJoinSecret $domainJoinSecret
 
-Write-Host "Manually connect Function App to public git repo"
-Pause
-
-$parsedIDs = $systemDeployResult.OutputsString.Split("")
-
 #Add output information to resource group
-$roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$devTestLabRG
-$roleResult = New-AzRoleAssignment -ObjectId $($parsedIDs[99]) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$systemRG
+$roleResult = New-AzRoleAssignment -ObjectId $($systemDeployResult.Outputs.functionAppPrincipalId.Value) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$devTestLabRG
+$roleResult = New-AzRoleAssignment -ObjectId $($systemDeployResult.Outputs.functionAppPrincipalId.Value) -RoleDefinitionName "Contributor" -Scope /subscriptions/$($subInformation.Subscription.Id)/resourceGroups/$systemRG
 
 $deployName = $baseSystemName + "lab"
 # Create Lab
