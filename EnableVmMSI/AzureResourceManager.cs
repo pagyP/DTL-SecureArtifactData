@@ -89,11 +89,11 @@ namespace EnableVmMSI
 
                 JObject vmsObject = JObject.Parse(response);
 
-                log.LogInformation("[EnableVmMSIFunction] After JObject:" + DateTime.Now.ToString());
+                log.LogInformation("[EnableVmMSIFunction] After Parsing objects:" + DateTime.Now.ToString());
 
                 JArray vms = (JArray)vmsObject.SelectToken("value");
 
-                log.LogInformation("[EnableVmMSIFunction] After JArray:" + vms.Count.ToString() + " : " + DateTime.Now.ToString());
+                log.LogInformation("[EnableVmMSIFunction] After Parsing VMs:" + vms.Count.ToString() + " : " + DateTime.Now.ToString());
 
                 foreach (JToken lab in vms.Children())
                 {
@@ -101,10 +101,11 @@ namespace EnableVmMSI
                     int first = 0;
                     string labRg = "";
                     string labName = "";
-                    log.LogInformation("[EnableVmMSIFunction] After ForEach:" + DateTime.Now.ToString());
+                    log.LogInformation("[EnableVmMSIFunction] For Each VM:" + DateTime.Now.ToString());
                     // The vmCreationResourceGroupId is the property where the VMs are created.
                     JToken rgId = lab.SelectToken("$.properties.vmCreationResourceGroupId");
-
+                    log.LogInformation("[EnableVmMSIFunction] RG Id:" + DateTime.Now.ToString());
+                    log.LogInformation("[EnableVmMSIFunction] RG Id:" + rgId);
 
                     if (rgId != null)
                     {
@@ -172,6 +173,7 @@ namespace EnableVmMSI
                             await vm.RefreshAsync();
                             // Get the keyvault
                             var _keyVault = _msiazure.Vaults.GetByResourceGroup(vault.KeyVaultResourceGroup, vault.KeyVaultName);
+                            log.LogInformation("[EnableVmMSIFunction] Add KeyVault:" + DateTime.Now.ToString());
                             // Add access policy
                             await _keyVault.Update()
                                 .DefineAccessPolicy()
@@ -179,7 +181,7 @@ namespace EnableVmMSI
                                     .AllowSecretPermissions(SecretPermissions.Get)
                                 .Attach()
                                 .ApplyAsync();
-                            // Remove after 4 min 
+                            // Remove after 5 min 
                             log.LogInformation("[EnableVmMSIFunction] Cleanup:" + DateTime.Now.ToString());
                             await RemoveAccess(vm, _keyVault, log);
                         }
@@ -227,7 +229,7 @@ namespace EnableVmMSI
         {
             try
             {
-                TimeSpan timeSpan = new TimeSpan(0, 4, 0);
+                TimeSpan timeSpan = new TimeSpan(0, 5, 0);
                 await Task.Delay(timeSpan);
                 log.LogInformation("[EnableVmMSIFunction] Cleanup Delay finished:" + DateTime.Now.ToString());
                 // Remove Access policy
