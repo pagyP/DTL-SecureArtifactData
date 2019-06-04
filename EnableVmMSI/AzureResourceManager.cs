@@ -53,7 +53,7 @@ namespace EnableVmMSI
 
             // Get the LabResourceGroup
             resourceInfo.LabResourceGroup = ParseLabResourceGroup(resourceInfo.ResourceUri);
-            resourceInfo.LabName = await GetLabName(resourceInfo.LabResourceGroup, log);
+            resourceInfo.LabName = await GetLabName(resourceInfo, log);
 
             AzureCredentials _azureCred = SdkContext.AzureCredentialsFactory.FromServicePrincipal(
                 _id, _cred, resourceInfo.TenantId, AzureEnvironment.AzureGlobalCloud);
@@ -78,7 +78,7 @@ namespace EnableVmMSI
         }
 
         // Get the lab with the resource group that the CSE is executed in
-        private async Task<string> GetLabName(string resourceGroup, Microsoft.Extensions.Logging.ILogger log)
+        private async Task<string> GetLabName(AzureResourceInformation resourceInfo, Microsoft.Extensions.Logging.ILogger log)
         {
             try
             {
@@ -86,7 +86,7 @@ namespace EnableVmMSI
 
                 log.LogInformation("[EnableVmMSIFunction] Before Get Lab URL:" + DateTime.Now.ToString());
 
-                var response = await new Url($"https://management.azure.com/subscriptions/da8f3095-ac12-4ef2-9b35-fcd24842e207/providers/Microsoft.DevTestLab/labs")
+                var response = await new Url($"https://management.azure.com/subscriptions/{resourceInfo.SubscriptionId}/providers/Microsoft.DevTestLab/labs")
                         .WithOAuthBearerToken(_accessToken)
                         .SetQueryParams(expandProperty)
                         .GetStringAsync();
@@ -121,7 +121,7 @@ namespace EnableVmMSI
 
                         log.LogInformation("[EnableVmMSIFunction] After labName:" + labName + " : " + DateTime.Now.ToString());
 
-                        if (labRg == resourceGroup)
+                        if (labRg == resourceInfo.LabResourceGroup)
                         {
                             return lab.SelectToken("name").ToString();
                         }
