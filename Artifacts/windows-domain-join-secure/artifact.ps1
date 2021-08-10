@@ -87,8 +87,8 @@ function Join-Domain
 $MaxRetries = 25
 $currentRetry = 0
 $success = $false
-$DomainToJoin = "corp.rbestlocaldom.us"
-$KeyVaultName = "testkeyvault"
+$DomainToJoin = "corp.yoda.rocks"
+$KeyVaultName = "DevKeyVaultWE"
 
 Write-Host "Start: " + $(Get-Date)
 do {
