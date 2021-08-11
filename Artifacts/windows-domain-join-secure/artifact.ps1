@@ -105,13 +105,13 @@ do {
         $KeyVaultToken = $content.access_token
 
         # Get credentials
-        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/TestAccountCredential?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/Credential?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminPassword = $result.Substring($begin,$endlength)
 
         # Get Account
-        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/User?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/UserName?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminUsername = $result.Substring($begin,$endlength)
