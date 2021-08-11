@@ -87,8 +87,8 @@ function Join-Domain
 $MaxRetries = 25
 $currentRetry = 0
 $success = $false
-$DomainToJoin = "corp.yoda.rocks"
-$KeyVaultName = "DevKeyVaultWE"
+$DomainToJoin = "corp.contoso.com"
+$KeyVaultName = "pmpkv0088"
 
 Write-Host "Start: " + $(Get-Date)
 do {
@@ -111,7 +111,7 @@ do {
         $DomainAdminPassword = $result.Substring($begin,$endlength)
 
         # Get Account
-        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/TestAccountUser?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/User?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminUsername = $result.Substring($begin,$endlength)
