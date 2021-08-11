@@ -111,7 +111,7 @@ do {
         $DomainAdminPassword = $result.Substring($begin,$endlength)
 
         # Get Account
-        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/UserName?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
+        $result = (Invoke-WebRequest -Uri "https://$KeyVaultName.vault.azure.net/secrets/DomainJoinUserName?api-version=2016-10-01" -Method GET -Headers @{Authorization="Bearer $KeyVaultToken"} -UseBasicParsing).content
         $begin = $result.IndexOf("value") + 8
         $endlength = ($result.IndexOf('"',$begin) -10)
         $DomainAdminUsername = $result.Substring($begin,$endlength)
