@@ -11,8 +11,8 @@ $subscriptionID = '6d82d6cd-2bcc-4588-8db1-1e2c8c763f56'
         #$content = $response.Content | ConvertFrom-Json
         
 
-        Connect-AzAccount -Identity
-        Select-AzSubscription -SubscriptionId $subscriptionID
+Connect-AzAccount -Identity
+Select-AzSubscription -SubscriptionId $subscriptionID
 
 
 
@@ -24,9 +24,9 @@ $vm = Add-AzVMDataDisk -VM $vm -Name $dataDiskName -CreateOption Attach -Managed
 
 Update-AzVM -VM $vm -ResourceGroupName $rgName
 
-Start-Sleep -Seconds 30
+#Start-Sleep -Seconds 30
 
-$disks = Get-Disk | Where partitionstyle -eq 'raw' | sort number
+$disks = Get-Disk | Where-Object partitionstyle -eq 'raw' | Sort-Object number
 
     $letters = 70..89 | ForEach-Object { [char]$_ }
     $count = 0
