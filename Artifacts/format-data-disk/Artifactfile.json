@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/Azure/azure-devtestlab/master/schemas/2016-11-28/dtlArtifacts.json",
-  "title": "New VM Data Disk",
-  "description": "Uses VM managed identity to create a new data disk, attach to VM and format the disk within the VM.",
+  "title": "Format Data Disks",
+  "description": "Formats data disks attached to VM.",
   "publisher": "Paul Paginton - MSFT",
   "tags": [
     "Windows"
@@ -11,5 +11,6 @@
   "runCommand": {
     "commandToExecute": "powershell.exe -ExecutionPolicy bypass \"& ./artifact.ps1"
   }
-  
 }
+  
+  
