@@ -27,5 +27,6 @@ $vm = Get-AzVM -Name $vmName -ResourceGroupName $rgName
 $vm = Add-AzVMDataDisk -VM $vm -Name $dataDiskName -CreateOption Attach -ManagedDiskId $dataDisk1.Id -Lun 1
 
 Update-AzVM -VM $vm -ResourceGroupName $rgName
+Get-ChildItem
 
 #Start-Sleep -Seconds 30
