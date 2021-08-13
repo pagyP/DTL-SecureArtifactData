@@ -20,7 +20,22 @@ $dataDisk1 = New-AzDisk -DiskName $dataDiskName -Disk $diskConfig -ResourceGroup
 $vm = Get-AzVM -Name $vmName -ResourceGroupName $rgName
  Add-AzVMDataDisk -VM $vm -Name $dataDiskName -CreateOption Attach -ManagedDiskId $dataDisk1.Id -Lun 1
 
- #Update-AzVM -VM $vm -ResourceGroupName $rgName
+ Update-AzVM -VM $vm -ResourceGroupName $rgName -AsJob
 # Get-ChildItem
 
-#Start-Sleep -Seconds 30
+Start-Sleep -Seconds 120
+
+$disks = Get-Disk | Where-Object partitionstyle -eq 'raw' | Sort-Object number
+
+    $letters = 70..89 | ForEach-Object { [char]$_ }
+    $count = 0
+    $labels = "data1","data2"
+
+    foreach ($disk in $disks) {
+        $driveLetter = $letters[$count].ToString()
+        $disk |
+        Initialize-Disk -PartitionStyle MBR -PassThru |
+        New-Partition -UseMaximumSize -DriveLetter $driveLetter |
+        Format-Volume -FileSystem NTFS -NewFileSystemLabel $labels[$count] -Confirm:$false -Force
+	$count++
+    }
