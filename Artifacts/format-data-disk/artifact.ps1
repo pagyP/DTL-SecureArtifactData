@@ -1,6 +1,11 @@
 $rgName = 'test-rg1'
 $vmName = [System.Net.Dns]::GetHostName()
 
+Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata="true"} -UseBasicParsing
+
+Connect-AzAccount -Identity
+Select-AzSubscription -SubscriptionId $subscriptionID
+
 $vm = Get-AzVM -Name $vmName -ResourceGroupName $rgName
 Update-AzVM -VM $vm -ResourceGroupName $rgName
  
