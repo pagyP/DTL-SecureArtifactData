@@ -1,3 +1,10 @@
+$rgName = 'test-rg1'
+$vmName = [System.Net.Dns]::GetHostName()
+
+$vm = Get-AzVM -Name $vmName -ResourceGroupName $rgName
+Update-AzVM -VM $vm -ResourceGroupName $rgName
+ 
+
 $disks = Get-Disk | Where-Object partitionstyle -eq 'raw' | Sort-Object number
 
     $letters = 70..89 | ForEach-Object { [char]$_ }
